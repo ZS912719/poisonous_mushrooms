@@ -9,10 +9,9 @@ class DataSet:
         self.rng = np.random.default_rng(seed)
         self.df_processed = None
         self.df_sample = None
-        self.df_encoded = None
 
     def __len__(self):
-        return len(self.df)
+        return len(self.df_sample)
 
     def preprocess(self):
         """
@@ -48,28 +47,42 @@ class DataSet:
         df_sample = df.sample(n=500000, random_state=self.rng)
         self.df_sample = df_sample
 
-    def onehot(self):
-        """
-        Normalize the numeric columns with min_max_scaler.
-        Normalize the categorical columns with one-hot encoding.
-        """
-        df = self.df_processed
-
-        categorical_columns = df.select_dtypes(include=['object']).columns.tolist()
-        numerical_columns = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
-
-        scaler = MinMaxScaler()
-        df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
-
-        df_encoded = pd.get_dummies(df, columns=categorical_columns)
-
-        self.df_encoded= df_encoded
+    def split(self):
+        sample = self.df_sample.copy().drop("class", axis=1)
+        numerical_columns = sample.select_dtypes(include=["int64", "float64"]).columns
+        categorical_columns = sample.select_dtypes(exclude=["int64", "float64"]).columns
+        return numerical_columns, categorical_columns
 
     def __call__(self):
         self.preprocess()
         self.get_sample()
-        self.onehot()
         print("subset made and encoded")
 
-    # def __getitem__(self, idx):
+    def __getitem__(self, idx):
 
+        sample = self.df_sample.iloc[idx]
+        part_X = sample.drop("class")
+        part_y = sample["class"]
+
+        numerical_columns, categorical_columns = self.split()
+
+        X_num = []
+        if len(numerical_columns) > 0:
+            scaler = MinMaxScaler()
+            scaler.fit(self.df_sample[numerical_columns])
+            X_num = scaler.transform(part_X[numerical_columns].values.reshape(1, -1)).flatten()
+
+        X_cat = []
+        for col in categorical_columns:
+            unique_values = self.df_sample[col].unique()
+            unique_map = {v: i for i, v in enumerate(unique_values)}
+            onehot_array = np.zeros(len(unique_values), float)
+            onehot_index = unique_map[part_X[col]]
+            onehot_array[onehot_index] = 1
+            X_cat.append(onehot_array)
+
+        X = np.concatenate([X_num] + X_cat)
+
+        y = 0 if part_y == 'e' else 1
+
+        return X, y
