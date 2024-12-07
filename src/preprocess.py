@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 from sklearn import preprocessing
 
@@ -7,8 +6,18 @@ class DataSet:
 
     def __init__(self, df:pd.DataFrame):
         self.df = df
-        self.df_sample = None
-        self.X = None
+
+    def __call__(self):
+        processed = self.preprocess(self.df.copy())
+        self.sample = self.get_sample(processed)
+        self.X_cat, self.X_num, self.y = self.encode(self.sample)
+        print("subset made and encoded")
+
+    def __getitem__(self, idx):
+        X_cat = self.X_cat[idx]
+        X_num = self.X_num[idx]
+        y = self.y[idx]
+        return X_cat, X_num, y
 
     @staticmethod
     def preprocess(df:pd.DataFrame):
@@ -22,54 +31,39 @@ class DataSet:
         threshold = 0.6
 
         high_missing_cols = df.columns[df.isnull().mean() > threshold]
-        df_processed = df.drop(columns=high_missing_cols)
+        processed = df.drop(columns=high_missing_cols)
 
-        for col in df_processed.columns:
-            if df_processed[col].isnull().any():
-                if df_processed[col].dtype == 'object':
-                    df_processed[col] = df_processed[col].fillna(df_processed[col].mode()[0])
+        for col in processed.columns:
+            if processed[col].isnull().any():
+                if processed[col].dtype == 'object':
+                    processed[col] = processed[col].fillna(processed[col].mode()[0])
                 else:
-                    df_processed[col] = df_processed[col].fillna(df_processed[col].median())
+                    processed[col] = processed[col].fillna(processed[col].median())
 
-        return df_processed
+        return processed
 
     @staticmethod
     def get_sample(df:pd.DataFrame):
         """
         take out 500,000 samples randomly to do training
         """
-        df_sample = df.sample(n=50, random_state= 0)
-        return df_sample
+        return df.sample(n=50, random_state= 0)
 
     @staticmethod
-    def split_features(sample):
-        sample = sample.drop(["id","class"],axis=1)
-        numerical_columns = sample.select_dtypes(include=["int64", "float64"])
-        categorical_columns = sample.select_dtypes(exclude=["int64", "float64"])
-        return numerical_columns, categorical_columns
-    
-    def encode(self):
-        sample = self.df_sample
-        # y = sample["class"]
-        numerical_columns, categorical_columns = self.split_features(sample)
+    def encode(sample):
+        category = sample['class']
+        features = sample.drop(["id","class"],axis=1)
+
+        numerical_columns = features.select_dtypes(include=["int64", "float64"])
+        categorical_columns = features.select_dtypes(exclude=["int64", "float64"])
+
         enc_onehot = preprocessing.OneHotEncoder()
+        enc_minmax = preprocessing.MinMaxScaler()
+        enc_label = preprocessing.LabelEncoder()
 
-        # X_num = ['test']
-        X_cat = []
-        
-        enc_onehot.fit(categorical_columns)
-        onehot_array = enc_onehot.transform(categorical_columns).toarray()
-        X_cat.append(onehot_array)
-        self.X =  X_cat
+        onehot_array = enc_onehot.fit_transform(categorical_columns).toarray()
+        minmax_array = enc_minmax.fit_transform(numerical_columns)
+        label_array = enc_label.fit_transform(category)
 
+        return onehot_array, minmax_array, label_array
 
-    def __call__(self):
-        df_processed = self.preprocess(self.df.copy())
-        self.df_sample = self.get_sample(df_processed)
-        self.encode()
-        print("subset made and encoded")
-
-    
-    def __getitem__(self, idx):
-        X = self.X[idx]
-        return X
