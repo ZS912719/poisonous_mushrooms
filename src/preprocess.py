@@ -1,28 +1,32 @@
+import numpy as np
 import pandas as pd
 from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
 
 
-class DataSet:
+class PreprocessDataset:
 
     def __init__(self, df:pd.DataFrame):
         self.df = df
 
     def __call__(self):
         processed = self.preprocess(self.df.copy())
-        self.sample = self.get_sample(processed)
-        self.X_cat, self.X_num, self.y = self.encode(self.sample)
+        self.sample_train, self.sample_test = self.get_sample(processed)
+        self.X_train, self.y_train = self.encode(self.sample_train)
+        self.X_test, self.y_test = self.encode(self.sample_test)
         print("subset made and encoded")
 
     def __getitem__(self, idx):
-        X_cat = self.X_cat[idx]
-        X_num = self.X_num[idx]
-        y = self.y[idx]
-        return X_cat, X_num, y
+        X_train = self.X_train[idx]
+        y_train = self.y_train[idx]
+        X_test = self.X_test[idx]
+        y_test = self.y_test[idx]
+        return X_train, y_train, X_test, y_test
 
     @staticmethod
     def preprocess(df:pd.DataFrame):
         """
-        Preprocess the dataset:
+        Preprocess the df_train:
         1. Remove columns with more than 60% missing values.
         2. For columns with lesser missing values, replace NaN:
             - With mode for categorical columns.
@@ -47,10 +51,18 @@ class DataSet:
         """
         take out 500,000 samples randomly to do training
         """
-        return df.sample(n=50, random_state= 0)
+        sample = df.sample(n=50, random_state= 0)
+        df_train, df_test = train_test_split(sample, test_size=0.20, random_state=0)
+        return df_train, df_test
 
     @staticmethod
     def encode(sample):
+        """
+        encode categorical columns with one-hot encoding.
+        transform numerical columns with min-max scaling.
+        :param sample:
+        :return:
+        """
         category = sample['class']
         features = sample.drop(["id","class"],axis=1)
 
@@ -65,5 +77,7 @@ class DataSet:
         minmax_array = enc_minmax.fit_transform(numerical_columns)
         label_array = enc_label.fit_transform(category)
 
-        return onehot_array, minmax_array, label_array
+        combined_input = np.concatenate([onehot_array, minmax_array], axis=1)
+
+        return combined_input, label_array
 
