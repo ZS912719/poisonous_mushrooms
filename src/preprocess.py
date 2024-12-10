@@ -11,10 +11,10 @@ class PreprocessDataset:
 
     def __call__(self):
         processed = self.preprocess(self.df.copy())
-        self.sample_train, self.sample_test = self.get_sample(processed)
-        self.X_train, self.y_train = self.encode(self.sample_train)
-        self.X_test, self.y_test = self.encode(self.sample_test)
-        print("subset made and encoded")
+        self.sample= self.get_sample(processed)
+        X, y = self.encode(self.sample)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+        print("*******PROCESSED*********")
 
     def __getitem__(self, idx):
         X_train = self.X_train[idx]
@@ -51,9 +51,7 @@ class PreprocessDataset:
         """
         take out 500,000 samples randomly to do training
         """
-        sample = df.sample(n=50, random_state= 0)
-        df_train, df_test = train_test_split(sample, test_size=0.20, random_state=0)
-        return df_train, df_test
+        return df.sample(n=50000, random_state= 0)
 
     @staticmethod
     def encode(sample):
