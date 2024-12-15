@@ -1,6 +1,4 @@
-import pandas as pd
 import torch
-from torch.utils.data import DataLoader, Dataset
 
 from src.binaryClassificationModel import BinaryClassificationModel
 
@@ -19,12 +17,10 @@ class Prediction:
     @staticmethod
     def predict(model, dataloader, device):
         predictions = []
-        ids = []
         with torch.no_grad():
-            for features, sample_ids in dataloader:
+            for features, _ in dataloader:
                 features = features.to(device)
                 outputs = model(features)
                 preds = torch.sigmoid(outputs).round()
                 predictions.extend(preds.cpu().numpy().flatten())
-                ids.extend(sample_ids)
-        return ids, predictions
+        return predictions
