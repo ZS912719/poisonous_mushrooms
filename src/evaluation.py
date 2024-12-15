@@ -3,22 +3,21 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 from src.binaryClassificationModel import BinaryClassificationModel
-from src.binaryClassificationDataset import BinaryClassificationDataset
 
 class Evaluation:
-    def __init__(self,X,y):
+    def __init__(self,X,y,model_path):
         self.X = X
         self.y = y
+        self.model_path = model_path
 
     def __call__(self, *args, **kwargs):
-        model_path = "../models/BinaryClassificationModel.pth"
         model = BinaryClassificationModel(self.X.shape[1])
-        model.load_state_dict(torch.load(model_path))
+        model.load_state_dict(torch.load(self.model_path, weights_only=True))
         model.eval()
 
         print("Model loaded successfully.")
 
-        eval_data = BinaryClassificationDataset(list(zip(self.X, self.y)))
+        eval_data = list(zip(self.X, self.y))
         eval_loader = DataLoader(eval_data, batch_size=32, shuffle=False)
 
         metrics = self.evaluate_model(model, eval_loader)
