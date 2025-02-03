@@ -1,2 +1,3 @@
 # poisonous_mushrooms
-machine learning project on python
+This is a machine learning project using python
+dataset source: Binary Prediction of Poisonous Mushrooms (Kaggle Playground Series - Season 4, Episode 8)
